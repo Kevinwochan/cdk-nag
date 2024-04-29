@@ -351,4 +351,29 @@ describe('AWS Lambda', () => {
       validateStack(stack, ruleId, TestType.VALIDATION_FAILURE);
     });
   });
+
+  describe('LambdaLogging: Ensure that Lambda functions have a corresponding Log Group', () => {
+    const ruleId = 'LambdaLogging';
+    test('Noncompliance 1', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+        loggingConfig: {
+          applicationLogLevel: 'applicationLogLevel',
+          logFormat: 'logFormat',
+          logGroup: 'logGroup',
+          systemLogLevel: 'systemLogLevel',
+        }
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+  })
 });
