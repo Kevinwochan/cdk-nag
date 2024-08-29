@@ -5,28 +5,32 @@ SPDX-License-Identifier: Apache-2.0
 import { Aspects, Stack } from 'aws-cdk-lib';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import {
+  CfnEventSourceMapping,
   CfnFunction,
   CfnPermission,
   CfnUrl,
   Code,
   DockerImageCode,
   DockerImageFunction,
+  EventSourceMapping,
   Function,
   FunctionUrlAuthType,
   Runtime,
   Tracing,
 } from 'aws-cdk-lib/aws-lambda';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { SqsDlq } from 'aws-cdk-lib/aws-lambda-event-sources';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { TestPack, TestType, validateStack } from './utils';
 import {
   LambdaConcurrency,
   LambdaDLQ,
+  LambdaEventSourceMappingDestination,
   LambdaFunctionPublicAccessProhibited,
   LambdaFunctionUrlAuth,
   LambdaInsideVPC,
   LambdaLatestVersion,
   LambdaTracing,
 } from '../../src/rules/lambda';
-import { TestPack, TestType, validateStack } from './utils';
 
 const testPack = new TestPack([
   LambdaConcurrency,
@@ -36,6 +40,7 @@ const testPack = new TestPack([
   LambdaInsideVPC,
   LambdaLatestVersion,
   LambdaTracing,
+  LambdaEventSourceMappingDestination,
 ]);
 let stack: Stack;
 
@@ -408,21 +413,74 @@ describe('AWS Lambda', () => {
       });
       validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
     });
+  });
 
-    test('Compliance - NodejsFunction with tracing enabled', () => {
-      new NodejsFunction(stack, 'rNodejsFunction', {
-        handler: 'handler',
-        tracing: Tracing.ACTIVE,
+  describe('LambdaEventSourceMappingDestination: Lambda event source mappings should have a failure destination configured', () => {
+    const ruleId = 'LambdaEventSourceMappingDestination';
+
+    test('Noncompliance 1 - No destinationConfig', () => {
+      new CfnEventSourceMapping(stack, 'rEventSourceMapping1', {
+        functionName: 'myFunction',
+        eventSourceArn: 'myEventSourceArn',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 2 - onFailure without destination', () => {
+      new CfnEventSourceMapping(stack, 'rEventSourceMapping4', {
+        functionName: 'myFunction',
+        eventSourceArn: 'myEventSourceArn',
+        destinationConfig: {
+          onFailure: {},
+        },
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance - Proper failure destination configured', () => {
+      new CfnEventSourceMapping(stack, 'rEventSourceMapping5', {
+        functionName: 'myFunction',
+        eventSourceArn: 'myEventSourceArn',
+        destinationConfig: {
+          onFailure: {
+            destination: 'arn:aws:sqs:us-east-1:123456789012:myQueue',
+          },
+        },
       });
       validateStack(stack, ruleId, TestType.COMPLIANCE);
     });
 
-    test('Noncompliance 4 - NodejsFunction with tracing disabled', () => {
-      new NodejsFunction(stack, 'rNodejsFunctionDisabled', {
-        handler: 'handler',
-        tracing: Tracing.DISABLED,
+    test('Noncompliance 3 - L2 construct without onFailure', () => {
+      const lambdaFunction = new Function(stack, 'MyFunction1', {
+        runtime: Runtime.NODEJS_20_X,
+        handler: 'index.handler',
+        code: Code.fromInline('exports.handler = async () => {};'),
       });
+
+      new EventSourceMapping(stack, 'MyEventSourceMapping1', {
+        target: lambdaFunction,
+        eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:myQueue',
+      });
+
       validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance - L2 construct with onFailure', () => {
+      const lambdaFunction = new Function(stack, 'MyFunction2', {
+        runtime: Runtime.NODEJS_20_X,
+        handler: 'index.handler',
+        code: Code.fromInline('exports.handler = async () => {};'),
+      });
+
+      const deadLetterQueue = new Queue(stack, 'DeadLetterQueue');
+
+      new EventSourceMapping(stack, 'MyEventSourceMapping2', {
+        target: lambdaFunction,
+        eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:myQueue',
+        onFailure: new SqsDlq(deadLetterQueue),
+      });
+
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
     });
   });
 });

@@ -7,6 +7,7 @@ export { default as LambdaConcurrency } from './LambdaConcurrency';
 export { default as LambdaDefaultMemorySize } from './LambdaDefaultMemorySize';
 export { default as LambdaDefaultTimeout } from './LambdaDefaultTimeout';
 export { default as LambdaDLQ } from './LambdaDLQ';
+export { default as LambdaEventSourceMappingDestination } from './LambdaEventSourceMappingDestination';
 export { default as LambdaFunctionPublicAccessProhibited } from './LambdaFunctionPublicAccessProhibited';
 export { default as LambdaFunctionUrlAuth } from './LambdaFunctionUrlAuth';
 export { default as LambdaInsideVPC } from './LambdaInsideVPC';
