@@ -7,10 +7,11 @@ import {
   appsync,
   cloudwatch,
   eventbridge,
+  iam,
   lambda,
   sns,
   sqs,
-  stepfunctions,
+  stepfunctions
 } from '../rules';
 
 /**
@@ -26,6 +27,7 @@ export class ServerlessChecks extends NagPack {
     if (node instanceof CfnResource) {
       this.checkLambda(node);
       this.checkCloudwatch(node);
+      this.checkIAM(node);
       this.checkApiGw(node);
       this.checkAppSync(node);
       this.checkEventBridge(node);
@@ -34,6 +36,7 @@ export class ServerlessChecks extends NagPack {
       this.checkStepFunctions(node);
     }
   }
+
 
   /**
    * Check Lambda Resources
@@ -58,7 +61,6 @@ export class ServerlessChecks extends NagPack {
       rule: lambda.LambdaEventSourceMappingDestination,
       node: node,
     });
-
 
     this.applyRule({
       info: 'Ensure that Lambda functions have an explcity timeout value',
@@ -109,6 +111,22 @@ export class ServerlessChecks extends NagPack {
         'Configuring a destination for failed invocations in Lambda Event Source Mappings allows you to capture and process events that fail to be processed by your Lambda function. This helps in monitoring, debugging, and implementing retry mechanisms for failed events, improving the reliability and observability of your serverless applications.',
       level: NagMessageLevel.ERROR,
       rule: lambda.LambdaEventSourceMappingDestination,
+      node: node,
+    });
+  }
+
+  /**
+ * Check Lambda Resources
+ * @param node the CfnResource to check
+ * @param ignores list of ignores for the resource
+ */
+  private checkIAM(node: CfnResource) {
+    this.applyRule({
+      info: 'Ensure Lambda functions do not have overly permissive IAM roles',
+      explanation:
+        'Lambda functions should follow the principle of least privilege. Avoid using wildcard (*) permissions in IAM roles attached to Lambda functions. Instead, specify only the permissions required for the function to operate.',
+      level: NagMessageLevel.WARN,
+      rule: iam.IAMNoWildcardPermissions,
       node: node,
     });
   }
