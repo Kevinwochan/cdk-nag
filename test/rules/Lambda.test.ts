@@ -13,8 +13,10 @@ import {
   DockerImageFunction,
   Function,
   FunctionUrlAuthType,
-  Runtime
+  Runtime,
+  Tracing,
 } from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import {
   LambdaConcurrency,
   LambdaDLQ,
@@ -22,7 +24,7 @@ import {
   LambdaFunctionUrlAuth,
   LambdaInsideVPC,
   LambdaLatestVersion,
-  LambdaLogging
+  LambdaTracing,
 } from '../../src/rules/lambda';
 import { TestPack, TestType, validateStack } from './utils';
 
@@ -33,7 +35,7 @@ const testPack = new TestPack([
   LambdaFunctionUrlAuth,
   LambdaInsideVPC,
   LambdaLatestVersion,
-  LambdaLogging,
+  LambdaTracing,
 ]);
 let stack: Stack;
 
@@ -354,4 +356,73 @@ describe('AWS Lambda', () => {
     });
   });
 
+  describe('LambdaTracing: Lambda functions have X-Ray tracing enabled', () => {
+    const ruleId = 'LambdaTracing';
+
+    test('Noncompliance 1 - Tracing not configured', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 2 - Tracing disabled', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+        tracingConfig: {
+          mode: 'PassThrough',
+        },
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance - Tracing enabled', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+        tracingConfig: {
+          mode: 'Active',
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Compliance - L2 construct with tracing enabled', () => {
+      new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+        tracing: Tracing.ACTIVE,
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Noncompliance 3 - L2 construct with tracing disabled', () => {
+      new Function(stack, 'rFunctionDisabled', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+        tracing: Tracing.DISABLED,
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance - NodejsFunction with tracing enabled', () => {
+      new NodejsFunction(stack, 'rNodejsFunction', {
+        handler: 'handler',
+        tracing: Tracing.ACTIVE,
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Noncompliance 4 - NodejsFunction with tracing disabled', () => {
+      new NodejsFunction(stack, 'rNodejsFunctionDisabled', {
+        handler: 'handler',
+        tracing: Tracing.DISABLED,
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+  });
 });
