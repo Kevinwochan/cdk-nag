@@ -138,10 +138,10 @@ export class ServerlessChecks extends NagPack {
    */
   private checkCloudwatch(node: CfnResource) {
     this.applyRule({
-      info: 'Ensure that CloudWatch Log Groups have an explcity retention policy',
+      info: 'Ensure that CloudWatch Log Groups have an explicit retention policy',
       explanation:
-        'By default, logs are kept indefinitely and never expire. You can adjust the retention policy for each log group, keeping the indefinite retention, or choosing a retention period between 10 years and one day.',
-      level: NagMessageLevel.ERROR,
+        'By default, logs are kept indefinitely and never expire. You can adjust the retention policy for each log group, keeping the indefinite retention, or choosing a retention period between 10 years and one day. For Lambda functions, this applies to their automatically created CloudWatch Log Groups.',
+      level: NagMessageLevel.WARN,
       rule: cloudwatch.CloudWatchLogGroupRetentionPeriod,
       node: node,
     });
