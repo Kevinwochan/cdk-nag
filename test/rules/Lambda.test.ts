@@ -2,7 +2,7 @@
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
-import { Aspects, Stack } from 'aws-cdk-lib';
+import { Aspects, Duration, Stack } from 'aws-cdk-lib';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import {
   CfnEventSourceMapping,
@@ -20,10 +20,10 @@ import {
 } from 'aws-cdk-lib/aws-lambda';
 import { SqsDlq } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
-import { TestPack, TestType, validateStack } from './utils';
 import {
   LambdaConcurrency,
   LambdaDefaultMemorySize,
+  LambdaDefaultTimeout,
   LambdaDLQ,
   LambdaEventSourceMappingDestination,
   LambdaFunctionPublicAccessProhibited,
@@ -32,6 +32,7 @@ import {
   LambdaLatestVersion,
   LambdaTracing,
 } from '../../src/rules/lambda';
+import { TestPack, TestType, validateStack } from './utils';
 
 const testPack = new TestPack([
   LambdaConcurrency,
@@ -43,6 +44,7 @@ const testPack = new TestPack([
   LambdaTracing,
   LambdaDefaultMemorySize,
   LambdaEventSourceMappingDestination,
+  LambdaDefaultTimeout,
 ]);
 let stack: Stack;
 
@@ -497,7 +499,7 @@ describe('AWS Lambda', () => {
       validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
     });
 
-    test('Noncompliance 2 - Explicitly set to default memory size', () => {
+    test('Noncompliance 2 - L2 Construct set to default memory size', () => {
       new Function(stack, 'rFunction', {
         runtime: Runtime.NODEJS_20_X,
         code: Code.fromInline('exports.handler = async () => {};'),
@@ -521,6 +523,46 @@ describe('AWS Lambda', () => {
         code: Code.fromInline('exports.handler = async () => {};'),
         handler: 'index.handler',
         memorySize: 512,
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+  });
+
+  describe('LambdaDefaultTimeout: Lambda functions should not use the default timeout', () => {
+    const ruleId = 'LambdaDefaultTimeout';
+
+    test('Noncompliance 1 - Default timeout (3 seconds)', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 2 - L2 construct explicitly using the default timeout', () => {
+      new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler'
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 1 - L1 construct with non-default timeout', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+        timeout: 10,
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Compliance 2 - L2 construct with non-default timeout', () => {
+      new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+        timeout: Duration.seconds(30),
       });
       validateStack(stack, ruleId, TestType.COMPLIANCE);
     });
