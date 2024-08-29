@@ -702,7 +702,25 @@ A collection of community rules that are not currently included in any of the pr
 | Rule ID               | Cause                                                              | Explanation                                                                                                                                                                 |
 | --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | LambdaFunctionUrlAuth | The Lambda Function URL allows for public, unauthenticated access. | AWS Lambda Function URLs allow you to invoke your function via a HTTPS end-point, setting the authentication to NONE allows anyone on the internet to invoke your function. |
-| LambdaLogging | The Lambda Function does not define an explicit Log Level | For cost optimization purposes, you should explicitly define the required log level for cost effective storage of Lambda Logs. |
+
+
+## Serverless
+
+The [Serverless Rules](https://awslabs.github.io/serverless-rules/) are a compilation of rules to validate infrastructure-as-code template against recommended practices.
+
+### Warnings
+
+| Rule ID                                                                           | Cause                                                | Explanation                                                                                                 |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| [LambdaTracing](https://awslabs.github.io/serverless-rules/rules/lambda/tracing/) | Lambda function does not have X-Ray tracing enabled. | AWS Lambda can emit traces to AWS X-Ray, which enables visualizing service maps for faster troubleshooting. |
+
+
+### Errors
+
+| Rule ID                                                                                                 | Cause                                           | Explanation                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [LambdaDefaultMemorySize](https://awslabs.github.io/serverless-rules/rules/lambda/default_memory_size/) | Lambda function does not specify a memory size. | Lambda CPU power and costs are proportional to the amount of memory configured. You can use tools such as AWS Lambda Power Tuning to test your function at different memory settings to find the one that matches your cost and performance requirements the best. |
+|                                                                                                         |
 
 ## Footnotes
 
