@@ -2,9 +2,9 @@
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
-import { parse } from 'path';
-import { CfnResource, Stack, aws_lambda } from 'aws-cdk-lib';
+import { CfnResource, Stack } from 'aws-cdk-lib';
 import { CfnFunction } from 'aws-cdk-lib/aws-lambda';
+import { parse } from 'path';
 import { NagRuleCompliance } from '../../nag-rules';
 
 /**
@@ -14,9 +14,8 @@ import { NagRuleCompliance } from '../../nag-rules';
 export default Object.defineProperty(
   (node: CfnResource): NagRuleCompliance => {
     if (node instanceof CfnFunction) {
-      const tracingConfig = Stack.of(node).resolve(node.tracingConfig);
-      if (tracingConfig === aws_lambda.Tracing.ACTIVE)
-        return NagRuleCompliance.COMPLIANT;
+      const tracingConfig = Stack.of(node).resolve(node.tracingConfig) as CfnFunction.TracingConfigProperty | undefined;
+      if (tracingConfig?.mode === 'Active') return NagRuleCompliance.COMPLIANT
       return NagRuleCompliance.NON_COMPLIANT;
     }
     return NagRuleCompliance.NOT_APPLICABLE;
