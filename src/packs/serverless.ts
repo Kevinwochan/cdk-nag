@@ -63,14 +63,6 @@ export class ServerlessChecks extends NagPack {
     });
 
     this.applyRule({
-      info: 'Ensure that Lambda functions have an explcity timeout value',
-      explanation:
-        'Lambda functions have a default timeout of 3 seconds.  If your timeout value is too short, Lambda might terminate invocations prematurely. On the other side, setting the timeout much higher than the average execution may cause functions to execute for longer upon code malfunction, resulting in higher costs and possibly reaching concurrency limits depending on how such functions are invoked. You can also use AWS Lambda Power Tuning to test your function at different timeout settings to find the one that matches your cost and performance requirements the best.',
-      level: NagMessageLevel.ERROR,
-      rule: lambda.LambdaDefaultTimeout,
-      node: node,
-    });
-    this.applyRule({
       info: 'Ensure that Lambda functions have an explicit memory value',
       explanation:
         "Lambda allocates CPU power in proportion to the amount of memory configured. By default, your functions have 128 MB of memory allocated. You can increase that value up to 10 GB. With more CPU resources, your Lambda function's duration might decrease.  You can use tools such as AWS Lambda Power Tuning to test your function at different memory settings to find the one that matches your cost and performance requirements the best.",
@@ -78,6 +70,16 @@ export class ServerlessChecks extends NagPack {
       rule: lambda.LambdaDefaultMemorySize,
       node: node,
     });
+
+    this.applyRule({
+      info: 'Ensure that Lambda functions have an explcity timeout value',
+      explanation:
+        'Lambda functions have a default timeout of 3 seconds.  If your timeout value is too short, Lambda might terminate invocations prematurely. On the other side, setting the timeout much higher than the average execution may cause functions to execute for longer upon code malfunction, resulting in higher costs and possibly reaching concurrency limits depending on how such functions are invoked. You can also use AWS Lambda Power Tuning to test your function at different timeout settings to find the one that matches your cost and performance requirements the best.',
+      level: NagMessageLevel.ERROR,
+      rule: lambda.LambdaDefaultTimeout,
+      node: node,
+    });
+
     this.applyRule({
       info: 'Ensure Lambda functions have a onFaliure destination configured',
       explanation:
