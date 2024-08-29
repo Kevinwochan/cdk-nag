@@ -23,6 +23,7 @@ import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { TestPack, TestType, validateStack } from './utils';
 import {
   LambdaConcurrency,
+  LambdaDefaultMemorySize,
   LambdaDLQ,
   LambdaEventSourceMappingDestination,
   LambdaFunctionPublicAccessProhibited,
@@ -40,6 +41,7 @@ const testPack = new TestPack([
   LambdaInsideVPC,
   LambdaLatestVersion,
   LambdaTracing,
+  LambdaDefaultMemorySize,
   LambdaEventSourceMappingDestination,
 ]);
 let stack: Stack;
@@ -480,6 +482,46 @@ describe('AWS Lambda', () => {
         onFailure: new SqsDlq(deadLetterQueue),
       });
 
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+  });
+
+  describe('LambdaDefaultMemorySize: Lambda functions should not use the default memory size', () => {
+    const ruleId = 'LambdaDefaultMemorySize';
+
+    test('Noncompliance 1 - Default memory size (128 MB)', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 2 - Explicitly set to default memory size', () => {
+      new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 1 - L1 construct with non-default memory size', () => {
+      new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+        memorySize: 128,
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Compliance 2 - L2 construct with non-default memory size', () => {
+      new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+        memorySize: 512,
+      });
       validateStack(stack, ruleId, TestType.COMPLIANCE);
     });
   });
