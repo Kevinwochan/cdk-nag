@@ -62,6 +62,15 @@ export class ServerlessChecks extends NagPack {
     });
 
     this.applyRule({
+      info: 'Ensure Lambda functions are using the latest runtime version',
+      explanation:
+        "Using the latest runtime version ensures that your Lambda function has access to the most recent features, performance improvements, and security updates. It's important to regularly update your Lambda functions to use the latest runtime versions to maintain optimal performance and security.",
+      level: NagMessageLevel.WARN,
+      rule: lambda.LambdaLatestVersion,
+      node: node,
+    });
+
+    this.applyRule({
       info: 'Ensure Lambda functions have a failure destination for asynchronous invocations',
       explanation:
         'When a Lambda function is invoked asynchronously (e.g., by S3, SNS, or EventBridge), it\'s important to configure a failure destination. This allows you to capture and handle events that fail processing, improving the reliability and observability of your serverless applications.',
