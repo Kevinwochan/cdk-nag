@@ -73,7 +73,7 @@ export class ServerlessChecks extends NagPack {
     this.applyRule({
       info: 'Ensure Lambda functions have a failure destination for asynchronous invocations',
       explanation:
-        'When a Lambda function is invoked asynchronously (e.g., by S3, SNS, or EventBridge), it\'s important to configure a failure destination. This allows you to capture and handle events that fail processing, improving the reliability and observability of your serverless applications.',
+        "When a Lambda function is invoked asynchronously (e.g., by S3, SNS, or EventBridge), it's important to configure a failure destination. This allows you to capture and handle events that fail processing, improving the reliability and observability of your serverless applications.",
       level: NagMessageLevel.ERROR,
       rule: lambda.LambdaAsyncFailureDestination,
       node: node,
@@ -112,15 +112,6 @@ export class ServerlessChecks extends NagPack {
         "Using the latest runtime version ensures that your Lambda function has access to the most recent features, performance improvements, and security updates. It's important to regularly update your Lambda functions to use the latest runtime versions to maintain optimal performance and security.",
       level: NagMessageLevel.ERROR,
       rule: lambda.LambdaLatestVersion,
-      node: node,
-    });
-
-    this.applyRule({
-      info: 'Ensure Lambda Event Source Mappings have a destination configured for failed invocations',
-      explanation:
-        'Configuring a destination for failed invocations in Lambda Event Source Mappings allows you to capture and process events that fail to be processed by your Lambda function. This helps in monitoring, debugging, and implementing retry mechanisms for failed events, improving the reliability and observability of your serverless applications.',
-      level: NagMessageLevel.ERROR,
-      rule: lambda.LambdaEventSourceMappingDestination,
       node: node,
     });
 
@@ -189,9 +180,9 @@ export class ServerlessChecks extends NagPack {
       node: node,
     });
     this.applyRule({
-      info: 'Ensure API Gateway stages have access logging enabled',
+      info: 'Ensure API Gateway logs are JSON structured',
       explanation:
-        'API Gateway provides access logging for API stages. Enable access logging on your API stages to monitor API requests and responses.',
+        'You can customize the log format that Amazon API Gateway uses to send logs. JSON Structured logging makes it easier to derive queries to answer arbitrary questions about the health of your application.',
       level: NagMessageLevel.ERROR,
       rule: apigw.APIGWStructuredLogging,
       node: node,
