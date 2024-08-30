@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 import { Aspects, Duration, Stack } from 'aws-cdk-lib';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import {
+  CfnEventInvokeConfig,
   CfnEventSourceMapping,
   CfnFunction,
   CfnPermission,
@@ -18,9 +19,12 @@ import {
   Runtime,
   Tracing,
 } from 'aws-cdk-lib/aws-lambda';
+import { SqsDestination } from 'aws-cdk-lib/aws-lambda-destinations';
 import { SqsDlq } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { TestPack, TestType, validateStack } from './utils';
 import {
+  LambdaAsyncFailureDestination,
   LambdaConcurrency,
   LambdaDefaultMemorySize,
   LambdaDefaultTimeout,
@@ -32,7 +36,6 @@ import {
   LambdaLatestVersion,
   LambdaTracing,
 } from '../../src/rules/lambda';
-import { TestPack, TestType, validateStack } from './utils';
 
 const testPack = new TestPack([
   LambdaConcurrency,
@@ -45,6 +48,7 @@ const testPack = new TestPack([
   LambdaDefaultMemorySize,
   LambdaEventSourceMappingDestination,
   LambdaDefaultTimeout,
+  LambdaAsyncFailureDestination,
 ]);
 let stack: Stack;
 
@@ -543,7 +547,7 @@ describe('AWS Lambda', () => {
       new Function(stack, 'rFunction', {
         runtime: Runtime.NODEJS_20_X,
         code: Code.fromInline('exports.handler = async () => {};'),
-        handler: 'index.handler'
+        handler: 'index.handler',
       });
       validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
     });
@@ -563,6 +567,78 @@ describe('AWS Lambda', () => {
         code: Code.fromInline('exports.handler = async () => {};'),
         handler: 'index.handler',
         timeout: Duration.seconds(30),
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+  });
+
+  describe('LambdaAsyncFailureDestination: Lambda functions with async invocation should have a failure destination', () => {
+    const ruleId = 'LambdaAsyncFailureDestination';
+
+    test('Noncompliance 1 - Lambda function with async event invoke but no failure handler', () => {
+      const lambdaFunction = new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+      });
+      new CfnEventInvokeConfig(stack, 'rEventInvokeConfig', {
+        functionName: lambdaFunction.ref,
+        qualifier: '$LATEST',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 2 - Lambda function with async event invoke but no failure handler', () => {
+      const lambdaFunction = new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+      });
+      const queue = new Queue(stack, 'DestinationQueue');
+      lambdaFunction.configureAsyncInvoke({
+        onSuccess: new SqsDestination(queue),
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 3 - L2 Lambda function with async invocation handler for successes but no failure handler', () => {
+      const lambdaFunction = new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+      });
+      const queue = new Queue(stack, 'DestinationQueue');
+      lambdaFunction.configureAsyncInvoke({
+        onSuccess: new SqsDestination(queue),
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance - Lambda function with proper async failure destination', () => {
+      const lambdaFunction = new CfnFunction(stack, 'rFunction', {
+        code: {},
+        role: 'somerole',
+      });
+      new CfnEventInvokeConfig(stack, 'rEventInvokeConfig', {
+        functionName: lambdaFunction.ref,
+        qualifier: '$LATEST',
+        destinationConfig: {
+          onFailure: {
+            destination: 'arn:aws:sqs:us-east-1:123456789012:myQueue',
+          },
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Compliance - L2 construct with async failure destination', () => {
+      const lambdaFunction = new Function(stack, 'rFunction', {
+        runtime: Runtime.NODEJS_20_X,
+        code: Code.fromInline('exports.handler = async () => {};'),
+        handler: 'index.handler',
+      });
+      const queue = new Queue(stack, 'DestinationQueue');
+      lambdaFunction.configureAsyncInvoke({
+        onFailure: new SqsDestination(queue),
       });
       validateStack(stack, ruleId, TestType.COMPLIANCE);
     });

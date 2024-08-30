@@ -11,7 +11,7 @@ import {
   lambda,
   sns,
   sqs,
-  stepfunctions
+  stepfunctions,
 } from '../rules';
 
 /**
@@ -37,7 +37,6 @@ export class ServerlessChecks extends NagPack {
     }
   }
 
-
   /**
    * Check Lambda Resources
    * @param node the CfnResource to check
@@ -59,6 +58,15 @@ export class ServerlessChecks extends NagPack {
         'Configuring a destination for failed invocations in Lambda Event Source Mappings allows you to capture and process events that fail to be processed by your Lambda function. This helps in monitoring, debugging, and implementing retry mechanisms for failed events, improving the reliability and observability of your serverless applications.',
       level: NagMessageLevel.ERROR,
       rule: lambda.LambdaEventSourceMappingDestination,
+      node: node,
+    });
+
+    this.applyRule({
+      info: 'Ensure Lambda functions have a failure destination for asynchronous invocations',
+      explanation:
+        'When a Lambda function is invoked asynchronously (e.g., by S3, SNS, or EventBridge), it\'s important to configure a failure destination. This allows you to capture and handle events that fail processing, improving the reliability and observability of your serverless applications.',
+      level: NagMessageLevel.ERROR,
+      rule: lambda.LambdaAsyncFailureDestination,
       node: node,
     });
 
@@ -92,7 +100,7 @@ export class ServerlessChecks extends NagPack {
     this.applyRule({
       info: 'Ensure Lambda functions are using the latest runtime version',
       explanation:
-        'Using the latest runtime version ensures that your Lambda function has access to the most recent features, performance improvements, and security updates. It\'s important to regularly update your Lambda functions to use the latest runtime versions to maintain optimal performance and security.',
+        "Using the latest runtime version ensures that your Lambda function has access to the most recent features, performance improvements, and security updates. It's important to regularly update your Lambda functions to use the latest runtime versions to maintain optimal performance and security.",
       level: NagMessageLevel.ERROR,
       rule: lambda.LambdaLatestVersion,
       node: node,
@@ -118,10 +126,10 @@ export class ServerlessChecks extends NagPack {
   }
 
   /**
- * Check Lambda Resources
- * @param node the CfnResource to check
- * @param ignores list of ignores for the resource
- */
+   * Check Lambda Resources
+   * @param node the CfnResource to check
+   * @param ignores list of ignores for the resource
+   */
   private checkIAM(node: CfnResource) {
     this.applyRule({
       info: 'Ensure Lambda functions do not have overly permissive IAM roles',
