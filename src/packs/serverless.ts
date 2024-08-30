@@ -11,7 +11,7 @@ import {
   lambda,
   sns,
   sqs,
-  stepfunctions
+  stepfunctions,
 } from '../rules';
 
 /**
@@ -228,11 +228,11 @@ export class ServerlessChecks extends NagPack {
    */
   private checkSNS(node: CfnResource) {
     this.applyRule({
-      info: 'Ensure SNS subscriptions have a DLQ configured',
+      info: 'SNS subscriptions should specify a redrive policy.',
       explanation:
-        'When a Dead Letter Queue (DLQ) is specified, messages that fail to deliver to targets are stored in the Dead Letter Queue',
+        'Configuring a redrive policy helps manage message delivery failures by sending undeliverable messages to a dead-letter queue.',
       level: NagMessageLevel.ERROR,
-      rule: sns.SNSDeadLetterQueue,
+      rule: sns.SNSRedrivePolicy,
       node: node,
     });
   }
@@ -244,17 +244,9 @@ export class ServerlessChecks extends NagPack {
    */
   private checkSQS(node: CfnResource) {
     this.applyRule({
-      info: 'Ensure SQS queues have a DLQ configured',
-      explanation:
-        'When a Dead Letter Queue (DLQ) is specified, messages that fail to deliver to targets are stored in the Dead Letter Queue',
-      level: NagMessageLevel.ERROR,
-      rule: sqs.SQSQueueDLQ,
-      node: node,
-    });
-
-    this.applyRule({
       info: 'SQS queues should have a redrive policy configured',
-      explanation: 'Configuring a redrive policy on an SQS queue allows you to define how many times SQS will make messages available for consumers before sending them to a dead-letter queue. This helps in managing message processing failures and provides a mechanism for handling problematic messages.',
+      explanation:
+        'Configuring a redrive policy on an SQS queue allows you to define how many times SQS will make messages available for consumers before sending them to a dead-letter queue. This helps in managing message processing failures and provides a mechanism for handling problematic messages.',
       level: NagMessageLevel.ERROR,
       rule: sqs.SQSRedrivePolicy,
       node: node,
