@@ -214,7 +214,7 @@ export class ServerlessChecks extends NagPack {
     this.applyRule({
       info: 'Ensure eventbridge targets have a DLQ configured',
       explanation:
-        'When a Dead Letter Queue (DLQ) is specified, messages that fail to deliver to targets are stored in the Dead Letter Queue',
+        "Configuring a Dead-Letter Queue (DLQ) for EventBridge rules helps manage failed event deliveries. When a rule's target fails to process an event, the DLQ captures these failed events, allowing for analysis, troubleshooting, and potential reprocessing. This improves the reliability and observability of your event-driven architectures by providing a safety net for handling delivery failures.",
       level: NagMessageLevel.ERROR,
       rule: eventbridge.EventBusDLQ,
       node: node,
