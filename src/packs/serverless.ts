@@ -198,8 +198,8 @@ export class ServerlessChecks extends NagPack {
     this.applyRule({
       info: 'Ensure tracing is enabled',
       explanation:
-        'AWS AppSync provides active tracing support for AWS X-Ray. Enable active tracing on your API stages to sample incoming requests and send traces to X-Ray.',
-      level: NagMessageLevel.ERROR,
+        'AWS AppSync can emit traces to AWS X-Ray, which enables visualizing service maps for faster troubleshooting.',
+      level: NagMessageLevel.WARN,
       rule: appsync.AppSyncTracing,
       node: node,
     });
