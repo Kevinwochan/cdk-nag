@@ -173,19 +173,19 @@ export class ServerlessChecks extends NagPack {
    */
   private checkApiGw(node: CfnResource) {
     this.applyRule({
-      info: 'Ensure tracing is enabled',
-      explanation:
-        'Amazon API Gateway provides active tracing support for AWS X-Ray. Enable active tracing on your API stages to sample incoming requests and send traces to X-Ray.',
-      level: NagMessageLevel.ERROR,
-      rule: apigw.APIGWXrayEnabled,
-      node: node,
-    });
-    this.applyRule({
       info: 'Ensure API Gateway stages have access logging enabled',
       explanation:
         'API Gateway provides access logging for API stages. Enable access logging on your API stages to monitor API requests and responses.',
       level: NagMessageLevel.ERROR,
       rule: apigw.APIGWAccessLogging,
+      node: node,
+    });
+    this.applyRule({
+      info: 'Ensure tracing is enabled',
+      explanation:
+        'Amazon API Gateway provides active tracing support for AWS X-Ray. Enable active tracing on your API stages to sample incoming requests and send traces to X-Ray.',
+      level: NagMessageLevel.ERROR,
+      rule: apigw.APIGWXrayEnabled,
       node: node,
     });
     this.applyRule({
