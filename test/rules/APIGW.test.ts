@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 import {
   AuthorizationType,
   CfnClientCertificate,
+  CfnDeployment,
   CfnRequestValidator,
   CfnRestApi,
   CfnStage,
@@ -12,6 +13,7 @@ import {
   RestApi,
 } from 'aws-cdk-lib/aws-apigateway';
 import { CfnRoute, CfnStage as CfnV2Stage } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CfnApi, CfnHttpApi } from 'aws-cdk-lib/aws-sam';
 import { CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2';
 import { Aspects, Stack } from 'aws-cdk-lib/core';
 import { TestPack, TestType, validateStack } from './utils';
@@ -23,6 +25,7 @@ import {
   APIGWExecutionLoggingEnabled,
   APIGWRequestValidation,
   APIGWSSLEnabled,
+  APIGWStructuredLogging,
   APIGWXrayEnabled,
 } from '../../src/rules/apigw';
 
@@ -35,6 +38,7 @@ const testPack = new TestPack([
   APIGWRequestValidation,
   APIGWSSLEnabled,
   APIGWXrayEnabled,
+  APIGWStructuredLogging,
 ]);
 let stack: Stack;
 
@@ -315,6 +319,128 @@ describe('Amazon API Gateway', () => {
       new RestApi(stack, 'rRestApi', {
         deployOptions: { tracingEnabled: true },
       }).root.addMethod('ANY');
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+  });
+
+  describe('APIGWStructuredLogging: API Gateway stages use JSON-formatted structured logging', () => {
+    const ruleId = 'APIGWStructuredLogging';
+
+    test('Noncompliance 1: Non-JSON format (CfnStage)', () => {
+      new CfnStage(stack, 'rRestApiStageNonJsonFormat', {
+        restApiId: 'foo',
+        stageName: 'prod',
+        accessLogSetting: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+          format:
+            '$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] "$context.httpMethod $context.resourcePath $context.protocol" $context.status $context.responseLength $context.requestId',
+        },
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 1: JSON-formatted log (CfnStage)', () => {
+      new CfnStage(stack, 'rRestApiStageJsonFormat', {
+        restApiId: 'foo',
+        stageName: 'prod',
+        accessLogSetting: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+          format:
+            '{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength"}',
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Compliance 2: HTTP API with JSON-formatted log (CfnStageV2)', () => {
+      new CfnV2Stage(stack, 'rHttpApiStageJsonFormat', {
+        apiId: 'bar',
+        stageName: 'prod',
+        accessLogSettings: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+          format:
+            '{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength"}',
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Noncompliance 2: No access log settings (CfnDeployment)', () => {
+      new CfnDeployment(stack, 'rRestApiDeploymentNoLogs', {
+        restApiId: 'foo',
+        stageDescription: {
+          accessLogSetting: {
+            destinationArn:
+              'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+          },
+        },
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 3: JSON-formatted log (CfnDeployment)', () => {
+      new CfnDeployment(stack, 'rRestApiDeploymentJsonFormat', {
+        restApiId: 'foo',
+        stageDescription: {
+          accessLogSetting: {
+            destinationArn:
+              'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+            format:
+              '{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength"}',
+          },
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Noncompliance 3: No access log settings (CfnApi)', () => {
+      new CfnApi(stack, 'rSamApiNoLogs', {
+        stageName: 'MyApi',
+        accessLogSetting: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+        },
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 4: JSON-formatted log (CfnApi)', () => {
+      new CfnApi(stack, 'rSamApiJsonFormat', {
+        stageName: 'MyApi',
+        accessLogSetting: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+          format:
+            '{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength"}',
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Noncompliance 4: No access log settings (CfnHttpApi)', () => {
+      new CfnHttpApi(stack, 'rSamHttpApiNoLogs', {
+        stageName: 'MyApi',
+        accessLogSetting: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+        },
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 5: JSON-formatted log (CfnHttpApi)', () => {
+      new CfnHttpApi(stack, 'rSamHttpApiJsonFormat', {
+        stageName: 'MyApi',
+        accessLogSetting: {
+          destinationArn:
+            'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
+          format:
+            '{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength"}',
+        },
+      });
       validateStack(stack, ruleId, TestType.COMPLIANCE);
     });
   });
