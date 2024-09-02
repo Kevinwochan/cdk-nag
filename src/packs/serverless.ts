@@ -187,6 +187,14 @@ export class ServerlessChecks extends NagPack {
       rule: apigw.APIGWStructuredLogging,
       node: node,
     });
+    this.applyRule({
+      info: 'Ensure API Gateway stages are not using default throttling settings',
+      explanation:
+        'API Gateway default throttling settings may not be suitable for all applications. Custom throttling limits help protect your backend systems from being overwhelmed with requests, ensure consistent performance, and can be tailored to your specific use case.',
+      level: NagMessageLevel.ERROR,
+      rule: apigw.APIGWDefaultThrottling,
+      node: node,
+    });
   }
 
   /**
