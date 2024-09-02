@@ -22,6 +22,7 @@ import {
   APIGWAssociatedWithWAF,
   APIGWAuthorization,
   APIGWCacheEnabledAndEncrypted,
+  APIGWDefaultThrottling,
   APIGWExecutionLoggingEnabled,
   APIGWRequestValidation,
   APIGWSSLEnabled,
@@ -39,6 +40,7 @@ const testPack = new TestPack([
   APIGWSSLEnabled,
   APIGWXrayEnabled,
   APIGWStructuredLogging,
+  APIGWDefaultThrottling,
 ]);
 let stack: Stack;
 
@@ -439,6 +441,69 @@ describe('Amazon API Gateway', () => {
             'arn:aws:logs:us-east-1:123456789012:log-group:API-Gateway-Execution-Logs_abc123/prod',
           format:
             '{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength"}',
+        },
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+  });
+
+  describe('APIGWDefaultThrottling: API Gateway REST and HTTP APIs have default throttling enabled', () => {
+    const ruleId = 'APIGWDefaultThrottling';
+
+    test('Noncompliance 1: REST API without throttling', () => {
+      new CfnStage(stack, 'rRestApiStageNoThrottling', {
+        restApiId: 'foo',
+        stageName: 'prod',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 2: HTTP API without throttling', () => {
+      new CfnV2Stage(stack, 'rHttpApiStageNoThrottling', {
+        apiId: 'bar',
+        stageName: 'prod',
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Noncompliance 3: REST API with incomplete throttling', () => {
+      new CfnStage(stack, 'rRestApiStageIncompleteThrottling', {
+        restApiId: 'foo',
+        stageName: 'prod',
+        methodSettings: [
+          {
+            httpMethod: '*',
+            resourcePath: '/*',
+            throttlingRateLimit: 100,
+          },
+        ],
+      });
+      validateStack(stack, ruleId, TestType.NON_COMPLIANCE);
+    });
+
+    test('Compliance 1: REST API with complete throttling', () => {
+      new CfnStage(stack, 'rRestApiStageCompliantThrottling', {
+        restApiId: 'foo',
+        stageName: 'prod',
+        methodSettings: [
+          {
+            httpMethod: '*',
+            resourcePath: '/*',
+            throttlingRateLimit: 100,
+            throttlingBurstLimit: 50,
+          },
+        ],
+      });
+      validateStack(stack, ruleId, TestType.COMPLIANCE);
+    });
+
+    test('Compliance 2: HTTP API with throttling', () => {
+      new CfnV2Stage(stack, 'rHttpApiStageCompliantThrottling', {
+        apiId: 'bar',
+        stageName: 'prod',
+        defaultRouteSettings: {
+          throttlingRateLimit: 100,
+          throttlingBurstLimit: 50,
         },
       });
       validateStack(stack, ruleId, TestType.COMPLIANCE);
