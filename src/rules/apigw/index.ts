@@ -12,3 +12,4 @@ export { default as APIGWRequestValidation } from './APIGWRequestValidation';
 export { default as APIGWSSLEnabled } from './APIGWSSLEnabled';
 export { default as APIGWStructuredLogging } from './APIGWStructuredLogging';
 export { default as APIGWXrayEnabled } from './APIGWXrayEnabled';
+export { default as APIGWStructuredLogging } from './APIGWStructuredLogging'
