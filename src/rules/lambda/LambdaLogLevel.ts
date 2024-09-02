@@ -8,14 +8,15 @@ import { CfnFunction } from 'aws-cdk-lib/aws-lambda';
 import { NagRuleCompliance } from '../../nag-rules';
 
 /**
- * Ensure that Lambda functions have an explicit timeout value
+ * By default, CloudWatch log groups created by Lambda functions have an unlimited retention time. For cost optimization purposes, you should explicitly define a LogGroup which allows for the CloudWatchLogGroupRetentionPeriod rule to detect unspecified log retention periods. 
  * @param node the CfnResource to check
  */
 export default Object.defineProperty(
   (node: CfnResource): NagRuleCompliance => {
     if (node instanceof CfnFunction) {
-      const timeout = Stack.of(node).resolve(node.timeout);
-      if (timeout) return NagRuleCompliance.COMPLIANT;
+      const loggingConfig = Stack.of(node).resolve(node.loggingConfig);
+      if (loggingConfig && loggingConfig.logGroup)
+        return NagRuleCompliance.COMPLIANT;
       return NagRuleCompliance.NON_COMPLIANT;
     }
     return NagRuleCompliance.NOT_APPLICABLE;
